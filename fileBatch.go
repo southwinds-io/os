@@ -35,10 +35,10 @@ func ReadFileBatch(path string) ([][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ReadFileBacthFromBytes(content)
+	return ReadFileBatchFromBytes(content)
 }
 
-func ReadFileBacthFromBytes(content []byte) ([][]byte, error) {
+func ReadFileBatchFromBytes(content []byte) ([][]byte, error) {
 	files := make([][]byte, 0)
 	lenOfFile := make([]byte, 8)
 	reader := bytes.NewReader(content)
