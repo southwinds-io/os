@@ -31,15 +31,19 @@ func AppendFileBatch(content []byte, path string, perm os.FileMode) error {
 }
 
 func ReadFileBatch(path string) ([][]byte, error) {
-	files := make([][]byte, 0)
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
+	return ReadFileBacthFromBytes(content)
+}
+
+func ReadFileBacthFromBytes(content []byte) ([][]byte, error) {
+	files := make([][]byte, 0)
 	lenOfFile := make([]byte, 8)
 	reader := bytes.NewReader(content)
 	for {
-		_, err = io.ReadFull(reader, lenOfFile)
+		_, err := io.ReadFull(reader, lenOfFile)
 		if err != nil {
 			return nil, err
 		}
