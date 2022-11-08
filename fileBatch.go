@@ -16,18 +16,21 @@ import (
 
 // AppendFileBatch appends a []byte to an existing file or to a new file if not there
 func AppendFileBatch(content []byte, path string, perm os.FileMode) error {
-	buf := new(bytes.Buffer)
-	buf.Write(intToByteSlice(int64(len(content)))) // first 8 bytes contains length of request
-	buf.Write(content)
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return os.WriteFile(path, buf.Bytes(), perm)
-	}
-	file, err := os.OpenFile(path, os.O_APPEND, perm)
+	contentWithLen := AddLenHeader(content)
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
-	_, err = file.Write(buf.Bytes())
+	_, err = file.Write(contentWithLen)
 	return err
+}
+
+func AddLenHeader(content []byte) []byte {
+	buf := new(bytes.Buffer)
+	l := len(content)
+	buf.Write(intToByteSlice(int64(l))) // first 8 bytes contains length of request
+	buf.Write(content)
+	return buf.Bytes()
 }
 
 func ReadFileBatch(path string) ([][]byte, error) {
@@ -42,14 +45,17 @@ func ReadFileBatchFromBytes(content []byte) ([][]byte, error) {
 	files := make([][]byte, 0)
 	lenOfFile := make([]byte, 8)
 	reader := bytes.NewReader(content)
+	var ix int64 = 0
 	for {
+		lenOfFile = make([]byte, 8)
 		_, err := io.ReadFull(reader, lenOfFile)
 		if err != nil {
 			return nil, err
 		}
+		ix += 8
 		fileLen := byteSliceToInt(lenOfFile)
 		fileBuffer := make([]byte, fileLen)
-		_, err = reader.Seek(8, 0)
+		_, err = reader.Seek(ix, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -57,12 +63,12 @@ func ReadFileBatchFromBytes(content []byte) ([][]byte, error) {
 		if err != nil {
 			return nil, err
 		}
+		ix += int64(len(fileBuffer))
 		files = append(files, fileBuffer)
-		nextIndex := len(fileBuffer)
-		if nextIndex == reader.Len() {
+		if reader.Len() == 0 {
 			break
 		}
-		_, err = reader.Seek(int64(nextIndex), 0)
+		_, err = reader.Seek(ix, 0)
 	}
 	return files, nil
 }
